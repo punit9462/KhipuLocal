@@ -20,13 +20,14 @@
 
 #include <analitzaplot/plotsdictionarymodel.h>
 #include <analitzaplot/planecurve.h>
+#include <analitzaplot/functiongraph.h>
 #include <analitzagui/plotsview2d.h>
 #include <analitzagui/plotsview3d.h>
 #include <dictionaryitem.h>
 #include <analitza/expression.h>
-
+#include <analitzaplot/plotsmodel.h>
 #include <KDE/KApplication>
-
+#include <QBuffer>
 #include <QtGui/QDockWidget>
 #include <QtGui/QLayout>
 #include <QLineEdit>
@@ -186,7 +187,7 @@ void MainWindow::setupActions()
 {
     //file
     KStandardAction::openNew(this, SLOT(newFile()), actionCollection());
-    KStandardAction::open(this, SLOT(fooSlot()), actionCollection());
+    KStandardAction::open(this, SLOT(openFile()), actionCollection());
     KStandardAction::openRecent(this, SLOT(fooSlot()), actionCollection());    
     KStandardAction::save(this, SLOT(saveFile()), actionCollection());
     KStandardAction::saveAs(this, SLOT(fooSlot()), actionCollection());
@@ -370,25 +371,89 @@ void MainWindow::newFile()
 }
 
 void MainWindow::openFile()
-{
- 
-}
+{ // temp data
+// Replacement of qDebugs by writing into the file
 
-void MainWindow::saveFile(){
+    QMap<DictionaryItem*, Analitza::PlotItem*> map=m_document->currentDataMap();
+    if(map.empty())
+    {
+        qDebug() << "map is empty";
+        // just starting #no plot is available so no need to save
+          return;
+    }
+    QList<DictionaryItem*> spaceList=map.uniqueKeys();
+    if(spaceList.empty()){
+            qDebug() << "list is empty";
+            return;
+    }
+    if(m_savedSpaces > 0){ // home is clicked or not.!
+    // do this for the whole list and write at that time into a file
+    int i,j;
+    for(i=0;i<spaceList.size();i++){
+             DictionaryItem* space=spaceList.at(i);
+             QString title = space->title();
+             QString descr = space->description();
+             Analitza::Dimension dim = space->dimension();
+             qDebug() << title;
+             qDebug() << descr;
+             qDebug() << dim;
+
+             /*QMap<QString, int>::const_iterator i = map.find("HDR");
+             while (i != map.end() && i.key() == "HDR") {
+                 cout << i.value() << endl;
+                 ++i;
+             }*/
+             qDebug() << "coming";
+       /*      QMap<DictionaryItem*, Analitza::PlotItem*>::const_iterator j = map.find(space);
+             while (j != map.end() && j.key() == space) {
+                 qDebug() << j.value();
+                 ++j;
+             }
+       */      QList<Analitza::PlotItem*> plotList=map.values(space);
+             for (j=0;j<plotList.size();j++) {
+             Analitza::PlotItem* plotitem=plotList.at(j);
+      //       Analitza::PlotItem* plotitem =
+             if(plotitem==0)qDebug() << "null";
+             else qDebug() << "not null";
+             QString name=plotitem->name();
+             QString expression=plotitem->expression().toString();
+             qDebug() << name;
+             qDebug() << expression;
+             }
+        }
+    }
+
+    if(m_totalSpaces > m_savedSpaces) {  // if addspaces button is hit more than home
+    // need to save the current space
+        qDebug() << "correct approach";
+       QString activeSpaceTitle=m_spaceInfoDock->title();
+        QString activeSpacedescr=m_spaceInfoDock->description();
+        Analitza::PlotsModel* plotsmodel=m_document->plotsModel();
+        qDebug() << activeSpaceTitle;
+        qDebug() << activeSpacedescr;
+        qDebug() << m_currentSpaceDim;
+
+        // iterate through the whole model (two columns are there)
+        int nRows= plotsmodel->rowCount();
+        int i,j;
+        for (i=0;i<nRows;i++){
+
+                QString plotname=plotsmodel->data(plotsmodel->index(i,0)).toString();
+                QString plotequation=plotsmodel->data(plotsmodel->index(i,1)).toString();
+                    if(plotequation==""){
+                          qDebug() << "empty eqaution";
+                          return;
+                     }
+                qDebug() << plotname ;
+                qDebug() << plotequation;
+        }
+     }
+
+return;
+}
+void MainWindow::saveFile() {
     qDebug() << "working..";
-    QString path;
-    path = QFileDialog::getSaveFileName(this, tr("Save File (Please save with extension .khipu) "),"/");
-    if(path==""){
-        qDebug() << "error in saving file...may be path not found." ;
-        return;
-    }
-    qDebug() << "path: " << path;
-    QFile *file = new QFile(path,this);
-    if(!file->open(QFile::WriteOnly | QFile::Text)){
-        qDebug() << "Error in writing";
-        exit(0);
-    }
-    QTextStream out(file);
+
     /*QVariantList people;
     QVariantMap bob;
     bob.insert("Name", "Bob");
@@ -398,17 +463,218 @@ void MainWindow::saveFile(){
     alice.insert("Phonenumber", 321);
     people << bob << alice;
     */
+    QMap<DictionaryItem*, Analitza::PlotItem*> map=m_document->currentDataMap();
+    if(map.empty())
+    {
+        qDebug() << "map is empty";
+        // just starting #no plot is available so no need to save
+        return;
+    }
+    QList<DictionaryItem*> spaceList=map.uniqueKeys();
+    if(spaceList.empty()){
+            qDebug() << "list is empty";
+            return;
+    }
 
+    QVariantList plotspace_list;
+////////////
+    if(m_savedSpaces > 0){ // home is clicked or not.!
+    // do this for the whole list and write at that time into a file
+
+///////
+    int i,j;
+    for(i=0;i<m_savedSpaces;i++){
+        DictionaryItem* space=spaceList.at(i);
+        QString spaceName = space->title();
+        QString spaceDesc = space->description();
+        int dim = space->dimension();
+
+   /* qDebug() << title;
+    qDebug() << descr;
+    qDebug() << dim;
+*/
+
+        QVariantList subplot_list;
+        subplot_list.clear();
+
+        QVariantMap plotspace;
+        plotspace.insert("name",spaceName);
+        plotspace.insert("description",spaceDesc);
+        plotspace.insert("dimension",dim);
+        plotspace.insert("image",imageList.at(i));
+
+        QList<Analitza::PlotItem*> plotList=map.values(space);
+                   for (j=0;j<plotList.size();j++) {
+                   Analitza::PlotItem* plotitem=plotList.at(j);
+                   if(plotitem==0)qDebug() << "null";
+                   else qDebug() << "not null";
+                   QString plotName=plotitem->name();
+                   QString plotExpression=plotitem->expression().toString();
+                   QVariantMap plot;
+                   plot.insert("name",plotName);
+                   plot.insert("expression",plotExpression);
+                   if(dim==2){
+                    Analitza::FunctionGraph*functiongraph=static_cast<Analitza::FunctionGraph*> (plotList.at(j));
+                    double arg1min=functiongraph->interval(functiongraph->parameters().at(0)).first;
+                    double arg1max=functiongraph->interval(functiongraph->parameters().at(0)).second;
+                    plot.insert("arg1min",arg1min);
+                    plot.insert("arg1max",arg1max);
+                   }
+               /*    qDebug() << name;
+                   qDebug() << expression;
+                 */
+                   //writehere
+                   subplot_list << plot;
+                   }
+                   QJson::Serializer subserializer;
+                   QByteArray subjson = subserializer.serialize(subplot_list);
+
+                   plotspace.insert("plots",subjson);
+                   plotspace_list << plotspace;
+              }
+        }
+
+
+ ///////////////////////////////////////
+          if(m_totalSpaces > m_savedSpaces) {  // if addspaces button is hit more than home
+          // need to save the current space
+            //  qDebug() << "correct approach";
+              DictionaryItem* space=spaceList.at(m_totalSpaces-1); // use this just to get the plots because it does not contain correct space information
+              int dim = space->dimension();
+              QString activeSpaceTitle=m_spaceInfoDock->title();
+              QString activeSpacedescr=m_spaceInfoDock->description();
+     //         Analitza::PlotsModel* plotsmodel=m_document->plotsModel();
+             // qDebug() << activeSpaceTitle;
+             // qDebug() << activeSpacedescr;
+             // qDebug() << m_currentSpaceDim;
+
+              QVariantList subplot_list;
+              subplot_list.clear();
+
+              QVariantMap plotspace;
+              plotspace.insert("name",activeSpaceTitle);
+              plotspace.insert("description",activeSpacedescr);
+              plotspace.insert("dimension",dim);
+
+              // to save the current space thumbnail....
+              QPixmap thumbnail;
+              switch (space->dimension())
+              {
+                  case Analitza::Dim2D:
+                      thumbnail = QPixmap::grabWidget(m_dashboard->view2d());
+                      break;
+                  case Analitza::Dim3D:
+                  {
+                      m_dashboard->view3d()->updateGL();
+                      m_dashboard->view3d()->setFocus();
+                      m_dashboard->view3d()->makeCurrent();
+                      m_dashboard->view3d()->raise();
+
+                      QImage image(m_dashboard->view3d()->grabFrameBuffer(true));
+
+                      thumbnail = QPixmap::fromImage(image, Qt::ColorOnly);
+
+                      break;
+                  }
+              }
+              QString imageInText=thumbnailtoString(&thumbnail);
+              plotspace.insert("image",imageInText);
+
+
+              QList<Analitza::PlotItem*> plotList=map.values(space);
+                         for (int j=0;j<plotList.size();j++) {
+                         Analitza::PlotItem* plotitem=plotList.at(j);
+                         if(plotitem==0)qDebug() << "null";
+                         else qDebug() << "not null";
+                         QString plotName=plotitem->name();
+                         QString plotExpression=plotitem->expression().toString();
+                         QVariantMap plot;
+                         plot.insert("name",plotName);
+                         plot.insert("expression",plotExpression);
+                         if(dim==2){
+                          Analitza::FunctionGraph*functiongraph=static_cast<Analitza::FunctionGraph*> (plotList.at(j));
+                          double arg1min=functiongraph->interval(functiongraph->parameters().at(0)).first;
+                          double arg1max=functiongraph->interval(functiongraph->parameters().at(0)).second;
+                          plot.insert("arg1min",arg1min);
+                          plot.insert("arg1max",arg1max);
+                         }
+                         /*    qDebug() << name;
+                         qDebug() << expression;
+                       */
+                         //writehere
+
+                         subplot_list << plot;
+                         }
+
+              // iterate through the whole model (two columns are there)
+            /*  int nRows= plotsmodel->rowCount();
+              int i,j;
+              for (i=0;i<nRows;i++){
+
+                      QString plotname=plotsmodel->data(plotsmodel->index(i,0)).toString();
+                      QString plotequation=plotsmodel->data(plotsmodel->index(i,1)).toString();
+                          if(plotequation==""){
+                                qDebug() << "empty eqaution";
+                                return;
+                           }
+                      qDebug() << plotname ;
+                      qDebug() << plotequation;
+
+                      QVariantMap plot;
+                      plot.insert("name",plotname);
+                      plot.insert("expression",plotequation);
+
+                      subplot_list << plot;
+              }
+        */
+              QJson::Serializer subserializer;
+              QByteArray subjson = subserializer.serialize(subplot_list);
+
+              plotspace.insert("plots",subjson);
+              plotspace_list << plotspace;
+           }
+
+/////////////////////////////////////////////
+
+
+
+          QJson::Serializer serializer;
+          QByteArray json = serializer.serialize(plotspace_list);
+         // qDebug() << json;
+          QString path;
+          path = QFileDialog::getSaveFileName(this, tr("Save File (Please save with extension .khipu) "),"/");
+          if(path==""){
+              qDebug() << "error in saving file...may be path not found." ;
+              return;
+          }
+          qDebug() << "path: " << path;
+          QFile *file = new QFile(path,this);
+          if(!file->open(QFile::WriteOnly | QFile::Text)){
+              qDebug() << "Error in writing";
+              exit(0);
+          }
+          QTextStream out(file);
+          out << json;
+          file->close();
+
+
+
+
+/*
+
+
+
+     /////////////////////////////////////////////////////////////////
     QVariantList plotspace_list;
     QVariantList subplot_list;
 
     QVariantMap plotspace;
-    plotspace.insert("name","space name data");
-    plotspace.insert("description","space desc data");
+    plotspace.insert("name",spaceName);
+    plotspace.insert("description",spaceDesc);
 
     QVariantMap plot;
-    plot.insert("name","plot name data");
-    plot.insert("expression","plot expression data");
+    plot.insert("name",plotName);
+    plot.insert("expression",plotExpression);
 
     subplot_list << plot;
     QJson::Serializer subserializer;
@@ -445,7 +711,7 @@ void MainWindow::saveFile(){
             qDebug() << submap.value("name").toString() << "\t" << submap.value("expression").toString();
     }
   }
-
+*/
 }
 
 void MainWindow::activateSpace(int spaceidx)
@@ -596,16 +862,18 @@ void MainWindow::setVisibleDictionary()
 
 void MainWindow::addSpace2D()
 {
+    m_currentSpaceDim=2;
+    m_totalSpaces++;
     activateSpaceUi();
-    
     m_dashboard->showPlotsView2D();
     m_document->spacesModel()->addSpace(Analitza::Dim2D, i18n("Untitled %1", m_document->spacesModel()->rowCount()+1));
 }
 
 void MainWindow::addSpace3D()
 {
+    m_totalSpaces++;
     activateSpaceUi();
-    
+    m_currentSpaceDim=3;
     m_dashboard->showPlotsView3D();
     m_document->spacesModel()->addSpace(Analitza::Dim3D, i18n("Untitled %1", m_document->spacesModel()->rowCount()+1));
 }
@@ -622,7 +890,7 @@ void MainWindow::removeCurrentSpace()
 //NOTE se emite cuando se regresa de un space ... aqui se debe guardar la imforacion del space
 void MainWindow::goHome()
 {
-    qDebug() << "correct way";
+    m_savedSpaces++;
     if (m_dashboard->currentIndex() != 0) // si no esta en modo dashboard
     {
         ///guardando space info
@@ -654,13 +922,24 @@ void MainWindow::goHome()
                 break;
             }
         }
-
+        QString imageInText=thumbnailtoString(&thumbnail);
+        imageList.append(imageInText);
         thumbnail = thumbnail.scaled(QSize(PreviewWidth, PreviewHeight), Qt::IgnoreAspectRatio,Qt::SmoothTransformation);   
         space->setThumbnail(thumbnail);
-    }
-
+   }
     m_dashboard->goHome();
     activateDashboardUi();
+}
+
+QString MainWindow::thumbnailtoString(QPixmap *thumbnail){
+    QImage image = thumbnail->toImage();
+    QByteArray imageArray;
+    QBuffer buffer(&imageArray);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    QByteArray compressedImage = qCompress(buffer.data(), 9).toHex();
+    QString str(compressedImage);
+return str;
 }
 
 void MainWindow::buildCartesianGraphCurve()

@@ -25,7 +25,7 @@ SpaceInformation::SpaceInformation(QWidget* parent): QDockWidget(parent)
     m_widget = new Ui::SpaceInformationWidget;
     m_widget->setupUi(this);
     
-    setObjectName("asdasdds222");
+    //setObjectName("asdasdds222");
 }
 
 SpaceInformation::~SpaceInformation()
@@ -35,7 +35,7 @@ SpaceInformation::~SpaceInformation()
 
 QString SpaceInformation::title() const
 {
-    return m_widget->spaceTitle->text();
+     return m_widget->spaceTitle->text();
 }
 
 QString SpaceInformation::description() const

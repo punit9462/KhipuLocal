@@ -89,17 +89,20 @@ private:
     void setupActions();
     void setupToolBars();
     bool queryClose();
+    QString thumbnailtoString(QPixmap *thumbnail);
 
 private:
     DataStore *m_document;
     Dashboard *m_dashboard;
     Filter *m_filter;
-    
+    int m_currentSpaceDim;
+    int m_totalSpaces=0; // total hits to addspace2d + addspace3D
+    int m_savedSpaces=0; // total hits to home
     QDockWidget *m_plotsBuilderDock;
     PlotsEditor *m_spacePlotsDock;
     SpaceInformation *m_spaceInfoDock;
     SpaceOptions *m_spaceOptionsDock;
-    
+    QStringList imageList;
     //remove this
     
 private slots:
